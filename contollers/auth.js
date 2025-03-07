@@ -7,7 +7,6 @@ const passport = require("passport");
 require('dotenv').config();
 const crypto = require('crypto');
 const sendResetEmail = require('../helperFn/send-password-reset-email')
-const newAdmin = require('../helperFn/notify-admin')
 const sendVerificationEmail = require('../helperFn/send-verification-email')
 
 const login = async (req, res) => {

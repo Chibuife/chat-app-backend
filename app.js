@@ -1,14 +1,28 @@
 require('express-async-errors');
 const express = require('express');
 const app = express();
+const http = require('http');
 require('dotenv').config();
 const notFoundMiddleware = require('./middleware/not-found');
 const errorHandlerMiddleware = require('./middleware/error-handler');
 const authRoute = require('./router/auth-route')
+const WebSocket = require('ws');
 
+const chatRoute = require('./router/chat-route')
+const server = http.createServer(app);
 
 const connectDB = require('./db/connect')
 require('./passport-setup');
+const WebSocketServer = require('ws');
+const connection = require('./contollers/chat');
+const clients = new Map();
+const wss = new WebSocket.Server({ server });
+
+
+
+wss.on('connection', connection);
+
+
 
 // extra security packages
 const helmet = require('helmet');
@@ -42,6 +56,7 @@ app.use(express.json());
 
 // routes
 app.use('/api/v1/auth', authRoute)
+app.use('/api/v1/chat', chatRoute)
 
 
 app.use(notFoundMiddleware);
@@ -54,8 +69,9 @@ const port = process.env.port || 8080;
 const start = async () => {
     try {
         await connectDB(process.env.MONGODB_URI)
-        app.listen(port,
-        ()=> console.log(port))
+        server.listen(port, () => {
+            console.log(`Server running on http://localhost:${port}`);
+        });
     } catch (error) {
         console.log(error)
     }

@@ -36,6 +36,19 @@ const userSchema = mongoose.Schema({
         type: String,
     },
     isVerified: { type: Boolean, default: false },
+    friends: [
+        {
+            name: String,
+            image: String,
+            id: mongoose.Schema.Types.ObjectId,
+            message: [{
+                from: String,
+                to: String,
+                text: String,
+                timestamp: { type: Date, default: Date.now },
+            }],
+        }
+    ]
 })
 
 
