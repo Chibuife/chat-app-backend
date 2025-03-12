@@ -19,7 +19,13 @@ const userSchema = mongoose.Schema({
         unique: true,
         sparse: true
     },
-    name: {
+    firstName: {
+        type: String,
+        require: [true, 'provide name'],
+        minlength: 3,
+        maxlength: 15
+    },
+    lastName: {
         type: String,
         require: [true, 'provide name'],
         minlength: 3,
@@ -31,6 +37,7 @@ const userSchema = mongoose.Schema({
             /^(([^<>()[\]\\.,;:\s@"]+(\.[^<>()[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/,
             'Please provide a valid email',
         ],
+        unique: true,
     },
     password: {
         type: String,
@@ -48,7 +55,15 @@ const userSchema = mongoose.Schema({
                 timestamp: { type: Date, default: Date.now },
             }],
         }
-    ]
+    ],
+    friendRequest:[
+        {
+            firstName: String,
+            lastName:String,
+            image: String,
+            id: mongoose.Schema.Types.ObjectId,
+        }
+    ],
 })
 
 
@@ -87,7 +102,7 @@ userSchema.pre('findOneAndUpdate', async function (next) {
 //function to create token
 userSchema.methods.createJWT = function () {
     return jwt.sign(
-        { _id: this._id, name: this.name, email: this.email, dateOfBirth: this.dateOfBirth, games: this.games, twitter: this.twitter, twitch: this.twitch, facebook: this.facebook, discord: this.discord, youtube: this.youtube, whatsapp: this.whatsapp, gender: this.gender, imageName: this.imageName, country: this.country, },
+        { _id: this._id, firstName: this.firstName,lastName:this.lastName, email: this.email, facebook: this.facebook,imageName: this.imageName, },
         process.env.JWT_SECRET,
         {
             expiresIn: process.env.JWT_LIFETIME,

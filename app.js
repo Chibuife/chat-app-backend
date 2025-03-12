@@ -14,7 +14,7 @@ const server = http.createServer(app);
 const connectDB = require('./db/connect')
 require('./passport-setup');
 const WebSocketServer = require('ws');
-const connection = require('./contollers/chat');
+const {connection} = require('./contollers/chat');
 const clients = new Map();
 const wss = new WebSocket.Server({ server });
 
@@ -48,7 +48,7 @@ app.use(session({
 app.use(passport.initialize());
 // app.use(passport.session());
 
-app.use(cors({ origin: 'http://localhost:3000' }));
+app.use(cors({ origin: 'http://localhost:8081' }));
 app.use(xss());
 
 // error middleware to prevent crash
@@ -56,7 +56,7 @@ app.use(express.json());
 
 // routes
 app.use('/api/v1/auth', authRoute)
-app.use('/api/v1/chat', chatRoute)
+app.use('/api/v1/', chatRoute)
 
 
 app.use(notFoundMiddleware);

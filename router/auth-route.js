@@ -3,12 +3,11 @@ const router = express.Router();
 require('dotenv').config();
 
 
-const { login, signup, verify, forgottenpassword, passwordreset, logout, googleCallBack, facebookCallBack } = require('../contollers/auth');
+const { login, signup, forgottenpassword, passwordreset, logout, googleCallBack, facebookCallBack } = require('../contollers/auth');
 const passport = require('passport');
 
 router.post('/login', login)
 router.post('/signup', signup)
-router.get('/verify/:token', verify)
 router.post('/forgotten-password', forgottenpassword)
 router.put('/reset-password', passwordreset)
 

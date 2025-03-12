@@ -3,10 +3,13 @@ const router = express.Router();
 require('dotenv').config();
 
 
-const { login, signup, verify, forgottenpassword, passwordreset, logout, googleCallBack, facebookCallBack } = require('../contollers/auth');
-const passport = require('passport');
+const { getallusers, friendRequest, getallfriends, addFriend, removeFriend } = require('../contollers/chat');
 
-router.post('/message', login)
+router.post('/getallusers', getallusers)
+router.post('/friendRequest', friendRequest)
+router.post('/getallfriends', getallfriends)
+router.post('/addfriend', addFriend)
+router.post('/removeFriend', removeFriend)
 
 
 module.exports = router
