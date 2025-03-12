@@ -108,10 +108,9 @@ const getallusers = async (req, res) => {
 }
 
 const friendRequest = async (req, res) => {
-    const { id, userId, image, firstName, lastName } = req.body
-    // console.log(id, userId, image, firstName, lastName, "requuest")
+    const { id, userId, } = req.body
     const friendRequest = {
-        image, firstName, lastName, _id: userId
+        _id: userId
     }
     const user = await User.findOneAndUpdate(
         { _id: id },
@@ -120,35 +119,30 @@ const friendRequest = async (req, res) => {
         },
         { new: true, runValidators: true }
     );
-    // console.log(user)
     return res.status(200).json({ message: 'request sent', id: user._id })
 }
 
 const addFriend = async (req, res) => {
-    const { id, userId, image, firstName, lastName } = req.body
-    console.log(id, userId, image, firstName, lastName,'addfriends')
-    const friendRequest = {
-        image, firstName, lastName, _id: userId
-    }
+    const { id, userId, } = req.body
+
     const user = await User.findById(userId);
-    const request = user.friendRequest.find(req => req._id.toString() === id);
+    const request = user.friendRequest.filter(req => req._id.toString() === id);
     console.log(request,user,'req')
-    // if (request) {
-    //     await User.findByIdAndUpdate(
-    //         userId,
-    //         {
-    //             $pull: { friendRequest: { _id: requestId } }, // Remove request by ID
-    //             $addToSet: { friends: request } // Push full request object to friends
-    //         },
-    //         { new: true }
-    //     );
-    //     await User.findByIdAndUpdate({_id:id}, {
-    //         $addToSet: { friends: request } 
-    //     });
-    // }
+    if (request) {
+        await User.findByIdAndUpdate(
+        {_id:userId},
+            {
+                $pull: { friendRequest: { _id: id } }, 
+                $addToSet: { friends: request }
+            },
+            { new: true }
+        );
+        await User.findByIdAndUpdate({_id:id}, {
+            $addToSet: { friends: request } 
+        });
+    }
     
    
-    // console.log(user, 'user')
     return res.status(200).json({ message: 'accepted', id: user })
 
 }
@@ -156,13 +150,16 @@ const addFriend = async (req, res) => {
 const removeFriend = async (req, res) => {
     const { id, userId } = req.body
 
-    await User.findByIdAndUpdate({ id: userId }, {
-        $pull: { friends: { id } }
+    console.log(id, userId)
+
+    await User.findByIdAndUpdate({ _id: userId }, {
+        $pull: { friends: { _id:id } }
+    });
+    await User.findByIdAndUpdate({_id:id}, {
+        $pull: { friends: { _id: userId } }
     });
 
-    await User.findByIdAndUpdate(id, {
-        $pull: { friends: { id: userId } }
-    });
+    return res.status(200).json({ message: 'friend removed' })
 }
 
 
@@ -172,19 +169,16 @@ const getallfriends = async (req, res) => {
     try {
         const { id, username } = req.body;
 
-        // Fetch the current user's friends and friend requests
         const user = await User.findById(id).select('friends friendRequest');
         if (!user) {
             throw new Error('User not found');
         }
-
-        // Extract friend and friend request IDs
+        console.log(id, 'id')
         const friendIds = user.friends.map(friend => friend._id);
         const friendRequestIds = user.friendRequest.map(request => request._id);
 
         const query = { _id: { $in: [...friendIds, ...friendRequestIds] } };
 
-        // If username is provided and not empty, add name filter
         if (username && username.trim() !== "") {
             query.$or = [
                 { firstName: { $regex: new RegExp(`^${username}`, "i") } },
@@ -192,17 +186,16 @@ const getallfriends = async (req, res) => {
             ];
         }
 
-        // Find users based on query
         const users = await User.find(query);
-        // console.log(user, id, 'user', users)
 
-        const filteredUsers = users.map(user => ({
-            firstName: user.firstName,
-            lastName: user.lastName,
-            image: user.image,
-            id: user._id,
-            type: friendIds.includes(user._id) ? "friend" : "friendRequest"
-        }));
+        const filteredUsers = users.map(use =>({
+            firstName: use.firstName,
+            lastName: use.lastName,
+            image: use.image,
+            id: use._id.toString(),
+            type: friendIds.toString().includes(use._id.toString()) ? "friend" : "friendRequest"
+        }))
+        console.log(friendIds.toString(),filteredUsers,'user')
 
         return res.status(200).json(filteredUsers);
     } catch (error) {
