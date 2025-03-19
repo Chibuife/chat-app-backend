@@ -42,11 +42,8 @@ const userSchema = mongoose.Schema({
     password: {
         type: String,
     },
-    isVerified: { type: Boolean, default: false },
     friends: [
         {
-            name: String,
-            image: String,
             id: mongoose.Schema.Types.ObjectId,
             message: [{
                 from: String,
@@ -58,9 +55,11 @@ const userSchema = mongoose.Schema({
     ],
     friendRequest:[
         {
-            firstName: String,
-            lastName:String,
-            image: String,
+            id: mongoose.Schema.Types.ObjectId,
+        }
+    ],
+    sentRequest:[
+        {
             id: mongoose.Schema.Types.ObjectId,
         }
     ],
