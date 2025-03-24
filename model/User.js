@@ -31,6 +31,9 @@ const userSchema = mongoose.Schema({
         minlength: 3,
         maxlength: 15
     },
+    image: {
+        type: String,
+    },
     email: {
         type: String,
         match: [
@@ -49,6 +52,7 @@ const userSchema = mongoose.Schema({
                 from: String,
                 to: String,
                 text: String,
+                image:String,
                 timestamp: { type: Date, default: Date.now },
             }],
         }
@@ -101,7 +105,7 @@ userSchema.pre('findOneAndUpdate', async function (next) {
 //function to create token
 userSchema.methods.createJWT = function () {
     return jwt.sign(
-        { _id: this._id, firstName: this.firstName,lastName:this.lastName, email: this.email, facebook: this.facebook,imageName: this.imageName, },
+        { _id: this._id, firstName: this.firstName,lastName:this.lastName, email: this.email, facebook: this.facebook,image: this.image, },
         process.env.JWT_SECRET,
         {
             expiresIn: process.env.JWT_LIFETIME,

@@ -13,7 +13,7 @@ function sendResetEmail(email, token) {
         from: 'chibuifejohn1@gmail.com',
         to: email,
         subject: 'Password Reset',
-        text: `Click the following link to reset your password: http://localhost:3000/auth/passwordreset?token=${token}`
+        text: `Click the following link to reset your password: http://localhost:8081/auth/passwordreset?token=${token}`
     };
 
     transporter.sendMail(mailOptions, (error, info) => {

@@ -1,7 +1,29 @@
+const { BadRequestError } = require("../errors");
 const User = require("../model/User");
 const clients = new Map();
 const mongoose = require("mongoose");
 const { ObjectId } = require('mongoose').Types;
+require("dotenv").config();
+const multer = require("multer");
+const cloudinary = require("cloudinary").v2;
+const { CloudinaryStorage } = require("multer-storage-cloudinary");
+
+cloudinary.config({
+    cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+    api_key: process.env.CLOUDINARY_API_KEY,
+    api_secret: process.env.CLOUDINARY_API_SECRET,
+  });
+  
+  const storage = new CloudinaryStorage({
+    cloudinary: cloudinary,
+    params: {
+      folder: "profile_pictures",
+      allowed_formats: ["jpg", "png", "jpeg"],
+      transformation: [{ width: 500, height: 500, crop: "limit" }], 
+    },
+  });
+  
+const upload = multer({ storage });
 
 async function connection(ws) {
     ws.on('error', console.error);
@@ -16,6 +38,15 @@ async function connection(ws) {
         if (message.type === 'private_message') {
             const recipientWs = clients.get(message.to);
 
+            let imageUrl = null;
+            console.log(message.image,'message.image')
+            if (message.image) {
+                const result = await cloudinary.uploader.upload(message.image, {
+                    folder: "chat_images"
+                })
+                imageUrl = result.secure_url;
+            }
+
             await User.findOneAndUpdate(
                 {
                     _id: message.from,
@@ -27,6 +58,7 @@ async function connection(ws) {
                             from: message.from,
                             to: message.to,
                             text: message.text,
+                            image: imageUrl,
                             timestamp: new Date()
                         }
                     }
@@ -34,7 +66,7 @@ async function connection(ws) {
                 { new: true, runValidators: true }
             );
 
-           const to = await User.findOneAndUpdate(
+            const to = await User.findOneAndUpdate(
                 {
                     _id: message.to,
                     "friends._id": message.from
@@ -45,6 +77,7 @@ async function connection(ws) {
                             from: message.from,
                             to: message.to,
                             text: message.text,
+                            image: imageUrl,
                             timestamp: new Date()
                         }
                     }
@@ -52,7 +85,7 @@ async function connection(ws) {
                 { new: true, runValidators: true }
             );
 
-            console.log(to,"to")
+            console.log(to, "to")
 
             // Send message to recipient if online
             if (recipientWs && recipientWs.readyState === WebSocket.OPEN) {
@@ -70,7 +103,7 @@ async function connection(ws) {
             const user = await User.findOne({
                 _id: userId,
                 "friends._id": friendId
-            },  { "friends.$": 1 });
+            }, { "friends.$": 1 });
             console.log(user, 'user');
 
             if (user && user.friends.length > 0) {
@@ -104,7 +137,7 @@ const getallusers = async (req, res) => {
         const friendIds = user.friends.map(friend => friend._id);
         const friendRequestIds = user.friendRequest.map(request => request._id);
         const sentRequestIds = user.sentRequest.map(request => request._id);
-        const excludedIds = [new mongoose.Types.ObjectId(id), ...friendIds.map(fid => new mongoose.Types.ObjectId(fid)), friendRequestIds, sentRequestIds];
+        const excludedIds = [new mongoose.Types.ObjectId(id), ...friendIds.map(fid => new mongoose.Types.ObjectId(fid)), ...friendRequestIds, ...sentRequestIds];
 
         let query = { _id: { $nin: excludedIds } };
 
@@ -149,7 +182,7 @@ const friendRequest = async (req, res) => {
     await User.findOneAndUpdate(
         { _id: userId },
         {
-            $addToSet: { sentRequest:{_id:id} }
+            $addToSet: { sentRequest: { _id: id } }
         },
         { new: true, runValidators: true }
     );
@@ -172,9 +205,9 @@ const addFriend = async (req, res) => {
             },
             { new: true }
         );
-         await User.findByIdAndUpdate({ _id: id }, {
+        await User.findByIdAndUpdate({ _id: id }, {
             $pull: { sentRequest: { _id: id } },
-            $addToSet: { friends: {_id:userId} }
+            $addToSet: { friends: { _id: userId } }
         });
     }
 
@@ -197,7 +230,19 @@ const removeFriend = async (req, res) => {
 
     return res.status(200).json({ message: 'friend removed' })
 }
+const cancelFriendReq = async (req, res) => {
+    const { id, userId } = req.body
 
+
+    await User.findByIdAndUpdate({ _id: userId }, {
+        $pull: { sentRequest: { _id: id } }
+    });
+    await User.findByIdAndUpdate({ _id: id }, {
+        $pull: { friendRequest: { _id: userId } }
+    });
+
+    return res.status(200).json({ message: 'canceled request' })
+}
 
 
 
@@ -230,7 +275,7 @@ const getallfriends = async (req, res) => {
             lastName: use.lastName,
             image: use.image,
             id: use._id.toString(),
-            type: friendIds.toString().includes(use._id.toString()) ? "friend" :friendRequestIds.toString().includes(use._id.toString()) ? "friendRequest": "sentRequest"
+            type: friendIds.toString().includes(use._id.toString()) ? "friend" : friendRequestIds.toString().includes(use._id.toString()) ? "friendRequest" : "sentRequest"
         }))
         console.log(friendIds.toString(), filteredUsers, 'user')
 
@@ -264,13 +309,13 @@ const getfriendswithmessage = async (req, res) => {
         const users = await User.find(query);
         const getLastMessage = (friend) => {
             // if (!friend.message || friend.message.length === 0) return null;
-            const currentfriend = friend.friends.filter((item)=> item._id.toString() === id)[0]
+            const currentfriend = friend.friends.filter((item) => item._id.toString() === id)[0]
             const lastMsg = currentfriend.message.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))[0];
-            console.log(currentfriend.message,id,'friend')
+            console.log(currentfriend.message, id, 'friend')
 
             return lastMsg;
         };
-        
+
         const filteredUsers = users.map(use => ({
             firstName: use.firstName,
             lastName: use.lastName,
@@ -286,14 +331,14 @@ const getfriendswithmessage = async (req, res) => {
     }
 }
 
-const getUser = async(req, res)=>{     
-    try{ 
-        const {id} = req.body
-        const user = await User.findOne({_id:id})
-        if(!user){
+const getUser = async (req, res) => {
+    try {
+        const { id } = req.body
+        const user = await User.findOne({ _id: id })
+        if (!user) {
             return res.status(404).json({ message: "user not found" });
         }
-        return res.status(200).json({ 
+        return res.status(200).json({
             firstName: user.firstName,
             lastName: user.lastName,
             image: user.image,
@@ -305,4 +350,28 @@ const getUser = async(req, res)=>{
     }
 
 }
-module.exports = { connection, getallusers, friendRequest, getallfriends, addFriend, removeFriend, getfriendswithmessage, getUser };
+
+
+const updateProfile = async (req, res) => {
+    const { _id, email, lastName, firstName } = req.body
+    let profileImageUrl = null;
+    if (req.file) {
+        profileImageUrl = req.file.path;
+    }
+    console.log("Request body:", req.body);
+    console.log("Uploaded file:", req.file);
+    const checkEmail = await User.findOne({email})
+    const check = await User.findOne({_id})
+    if(checkEmail && checkEmail.email !== check.email){
+        throw new BadRequestError('user already exists')
+    }
+    const response = {}
+    if (firstName || firstName !== 'undefined') response.firstName = firstName;
+    if (lastName || lastName !== 'undefined') response.lastName = lastName;
+    if (email || email !== 'undefined') response.email = email;
+    if (profileImageUrl) response.image = profileImageUrl;
+
+    const user = await User.findOneAndUpdate({ _id },response, { new: true })
+    res.status(200).json({ firstName: user.firstName, lastName: user.lastName, email: user.email, image: user.image, _id: user._id })
+}
+module.exports = { connection, getallusers, friendRequest, getallfriends, addFriend, removeFriend, getfriendswithmessage, getUser, cancelFriendReq, updateProfile };

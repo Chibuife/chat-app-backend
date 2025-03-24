@@ -38,8 +38,17 @@ const signup = async (req, res) => {
     if(userIdentify){
         throw new BadRequestError('user already exists')
     }
-    const user = await User.create({ email, password,  lastName, firstName })
+
+    let profileImageUrl = null;
+    if (req.file) {
+      profileImageUrl = req.file.path;
+    }
+    console.log("Request body:", req.body);
+    console.log("Uploaded file:", req.file);
+
+    const user = await User.create({ email, password,  lastName, firstName, image: profileImageUrl })
     const token = user.createJWT()
+
     res.status(StatusCodes.OK).json({ token })
 }
 
