@@ -30,7 +30,6 @@ router.post('/signup', upload.single("profilePicture"), signup)
 router.post('/forgotten-password', forgottenpassword)
 router.put('/reset-password', passwordreset)
 
-// router.post('/make-admin', makeAdmin)
 router.get('/logout', logout)
 
 
@@ -38,13 +37,13 @@ router.get('/logout', logout)
 
 
 // facebook auth 
-// router.get('/facebook',
-//     passport.authenticate('facebook'));
+router.get('/facebook',
+    passport.authenticate('facebook'));
 
-// router.get('/facebook/callback',
-//     passport.authenticate('facebook', { failureRedirect: '/' }),
-//     facebookCallBack
-//  );
+router.get('/facebook/callback',
+    passport.authenticate('facebook', { failureRedirect: '/' }),
+    facebookCallBack
+ );
 
 module.exports = router
 
