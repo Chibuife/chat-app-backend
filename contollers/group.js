@@ -15,10 +15,9 @@ const createGroup = async (req, res) => {
     const newGroup = await Group.create({ name, members }, {new:true});
     members.map(async (memberId) => {
         await User.findByIdAndUpdate(memberId, {
-            $addToSet: { group: { id: newGroup._id, name: newGroup.name } }
+            $addToSet: { group: { id: newGroup[0]._id, name: newGroup[0].name } }
         });
     })
-    console.log(newGroup[0]._id)
     res.status(200).json({ msg: newGroup[0]._id })
 }
 
