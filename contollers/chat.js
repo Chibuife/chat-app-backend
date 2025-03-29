@@ -380,12 +380,20 @@ const getfriendswithmessage = async (req, res) => {
             return group.message.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))[0];
         };
 
-        const groupList = groups.map(group => ({
-            id: group._id.toString(),
-            name: group.name,
-            lastMessage: getLastGroupMessage(group),
-            members: group.members,
-            timestamp: group.timestamp
+        const groupList = await Promise.all(groups.map(async (group) => {
+            const membersDetails = await User.find({ _id: { $in: group.members } }).select('firstName lastName image');
+        
+            return {
+                id: group._id.toString(),
+                name: group.name,
+                lastMessage: getLastGroupMessage(group),
+                members: membersDetails.map(member => ({
+                    id: member._id.toString(),
+                    name: `${member.firstName} ${member.lastName}`,
+                    image: member.image
+                })),
+                timestamp: group.timestamp
+            };
         }));
 
         return res.status(200).json([...filteredUsers, ...groupList ]);
