@@ -38,13 +38,13 @@ router.get('/logout', logout)
 
 
 // facebook auth 
-router.get('/facebook',
-    passport.authenticate('facebook'));
+// router.get('/facebook',
+//     passport.authenticate('facebook'));
 
-router.get('/facebook/callback',
-    passport.authenticate('facebook', { failureRedirect: '/' }),
-    facebookCallBack
- );
+// router.get('/facebook/callback',
+//     passport.authenticate('facebook', { failureRedirect: '/' }),
+//     facebookCallBack
+//  );
 
 module.exports = router
 
