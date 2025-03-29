@@ -10,6 +10,7 @@ const groupSchema = new mongoose.Schema({
     message:[{
         from: String,
         text: String,
+        image:String,
         timestamp: { type: Date, default: Date.now },
     }],
     members:[],
