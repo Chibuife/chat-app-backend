@@ -67,6 +67,7 @@ const userSchema = mongoose.Schema({
             id: mongoose.Schema.Types.ObjectId,
         }
     ],
+    group:[]
 })
 
 

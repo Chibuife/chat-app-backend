@@ -7,6 +7,7 @@ require("dotenv").config();
 const multer = require("multer");
 const cloudinary = require("cloudinary").v2;
 const { CloudinaryStorage } = require("multer-storage-cloudinary");
+const Group = require("../model/Group");
 
 cloudinary.config({
     cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
@@ -23,7 +24,7 @@ cloudinary.config({
     },
   });
   
-const upload = multer({ storage });
+  const connectedUsers = new Map();
 
 async function connection(ws) {
     ws.on('error', console.error);
@@ -35,6 +36,52 @@ async function connection(ws) {
             console.log(`User ${message.userId} registered`);
         }
         console.log(message, 'message')
+        
+        if (message.type === "get_group_history") {
+            const group = await Group.findOne({ _id: message.group });
+
+            if (!group) {
+                return ws.send(JSON.stringify({ type: "error", message: "Group not found" }));
+            }
+
+            ws.send(JSON.stringify({ type: "history", messages: group.message }));
+        }
+        if (message.type === 'group_message') {
+            try {
+                let imageUrl = null; 
+
+                if (message.image) {
+                    const result = await cloudinary.uploader.upload(message.image, {
+                        folder: "chat_images",
+                    });
+                    imageUrl = result.secure_url;
+                }
+        
+                const group = await Group.findOneAndUpdate(
+                    { _id: message.to },
+                    {
+                        $push: {
+                            message: {
+                                from: message.from,
+                                text: message.text,
+                                timestamp: new Date(),
+                                image: imageUrl, 
+                            },
+                        },
+                    },
+                    { new: true }
+                );
+                console.log(group,"group")
+
+                if (!group) {
+                    return ws.send(JSON.stringify({ type: "error", message: "Group not found" }));
+                }
+                // ws.send(JSON.stringify({ type: "history", messages: group.message }));
+            } catch (error) {
+                console.error("Error sending group message:", error);
+                ws.send(JSON.stringify({ type: "error", message: "Internal server error" }));
+            }
+        }
         if (message.type === 'private_message') {
             const recipientWs = clients.get(message.to);
 
@@ -290,7 +337,7 @@ const getfriendswithmessage = async (req, res) => {
     try {
         const { id, username } = req.body;
 
-        const user = await User.findById(id).select('friends');
+        const user = await User.findById(id).select('friends group');
         if (!user) {
             throw new Error('User not found');
         }
@@ -322,9 +369,26 @@ const getfriendswithmessage = async (req, res) => {
             image: use.image,
             id: use._id.toString(),
             lastMessage: getLastMessage(use),
+            active: connectedUsers.has(user._id.toString())
         }))
 
-        return res.status(200).json(filteredUsers);
+        const groupIds = user.group.map(g => g.id);
+        const groups = await Group.find({ _id: { $in: groupIds } });
+
+        const getLastGroupMessage = (group) => {
+            if (!group.message || group.message.length === 0) return null;
+            return group.message.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))[0];
+        };
+
+        const groupList = groups.map(group => ({
+            id: group._id.toString(),
+            name: group.name,
+            lastMessage: getLastGroupMessage(group),
+            members: group.members,
+            timestamp: group.timestamp
+        }));
+
+        return res.status(200).json([...filteredUsers, ...groupList ]);
     } catch (error) {
         console.error("Error fetching users:", error);
         return res.status(500).json({ message: "Server error" });

@@ -6,6 +6,7 @@ const cloudinary = require("cloudinary").v2;
 const { CloudinaryStorage } = require("multer-storage-cloudinary");
 
 const { getallusers, friendRequest, getallfriends, addFriend, removeFriend, getfriendswithmessage, getUser, cancelFriendReq, updateProfile } = require('../contollers/chat');
+const { createGroup, getGroup } = require('../contollers/group');
 cloudinary.config({
     cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
     api_key: process.env.CLOUDINARY_API_KEY,
@@ -31,7 +32,7 @@ router.post('/getfriendswithmessage', getfriendswithmessage)
 router.post('/getUser', getUser)
 router.post('/cancelFriendReq', cancelFriendReq)
 router.post('/updateProfile',upload.single("profilePicture"), updateProfile)
-
+router.post('/createGroup', createGroup)
+router.post('/getGroup', getGroup)
 
 module.exports = router
-
