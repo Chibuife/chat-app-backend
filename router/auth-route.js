@@ -5,7 +5,7 @@ const multer = require("multer");
 const cloudinary = require("cloudinary").v2;
 const { CloudinaryStorage } = require("multer-storage-cloudinary");
 
-const { login, signup, forgottenpassword, passwordreset, logout, googleCallBack, facebookCallBack } = require('../contollers/auth');
+const { login, signup, forgottenpassword, passwordreset, logout,  facebookCallBack } = require('../contollers/auth');
 const passport = require('passport');
 
 cloudinary.config({
@@ -34,14 +34,6 @@ router.put('/reset-password', passwordreset)
 router.get('/logout', logout)
 
 
-// google auth 
-router.get('/google/callback',
-    passport.authenticate('google', { failureRedirect: '/login' }),
-    googleCallBack
-)
-
-router.get('/google',
-    passport.authenticate('google', { scope: ['https://www.googleapis.com/auth/plus.login', 'email'] }));
 
 
 

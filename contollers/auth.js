@@ -98,14 +98,6 @@ const logout = () => {
 }
 
 
-//signup with google
-const googleCallBack = (req, res) => {
-    // res.redirect(process.env.CLIENT_URL);
-    console.log(res)
-    res.redirect('http://localhost:3000/');
-}
-
-
 const facebookCallBack = (req, res) => {
     // res.redirect(process.env.CLIENT_URL);
     console.log(res)
@@ -115,4 +107,4 @@ const facebookCallBack = (req, res) => {
 
 
 
-module.exports = { login, signup, forgottenpassword, passwordreset, logout, googleCallBack, facebookCallBack }
+module.exports = { login, signup, forgottenpassword, passwordreset, logout, facebookCallBack }
