@@ -26,151 +26,166 @@ cloudinary.config({
   
   const connectedUsers = new Map();
 
-async function connection(ws) {
-    ws.on('error', console.error);
-    ws.on('message', async (data) => {
-        const message = JSON.parse(data);
-
-        if (message.type === 'register') {
-            clients.set(message.userId, ws);
-            console.log(`User ${message.userId} registered`);
+  async function connection(ws) {
+    ws.on("error", console.error);
+  
+    ws.on("message", async (data) => {
+      const message = JSON.parse(data);
+  
+      if (message.type === "register") {
+        clients.set(message.userId, ws);
+        console.log(`User ${message.userId} registered`);
+      }
+  
+      console.log(message, "message");
+  
+      if (message.type === "get_group_history") {
+        const group = await Group.findOne({ _id: message.group });
+  
+        if (!group) {
+          return ws.send(JSON.stringify({ type: "error", message: "Group not found" }));
         }
-        console.log(message, 'message')
-        
-        if (message.type === "get_group_history") {
-            const group = await Group.findOne({ _id: message.group });
-
-            if (!group) {
-                return ws.send(JSON.stringify({ type: "error", message: "Group not found" }));
-            }
-
-            ws.send(JSON.stringify({ type: "history", messages: group.message }));
-        }
-        if (message.type === 'group_message') {
-            try {
-                let imageUrl = null; 
-
-                if (message.image) {
-                    const result = await cloudinary.uploader.upload(message.image, {
-                        folder: "chat_images",
-                    });
-                    imageUrl = result.secure_url;
-                }
-        
-                const group = await Group.findOneAndUpdate(
-                    { _id: message.to },
-                    {
-                        $push: {
-                            message: {
-                                from: message.from,
-                                text: message.text,
-                                timestamp: new Date(),
-                                image: imageUrl, 
-                            },
-                        },
-                    },
-                    { new: true }
-                );
-                console.log(group,"group")
-
-                if (!group) {
-                    return ws.send(JSON.stringify({ type: "error", message: "Group not found" }));
-                }
-                // ws.send(JSON.stringify({ type: "history", messages: group.message }));
-            } catch (error) {
-                console.error("Error sending group message:", error);
-                ws.send(JSON.stringify({ type: "error", message: "Internal server error" }));
-            }
-        }
-        if (message.type === 'private_message') {
-            const recipientWs = clients.get(message.to);
-
-            let imageUrl = null;
-            console.log(message.image,'message.image')
-            if (message.image) {
-                const result = await cloudinary.uploader.upload(message.image, {
-                    folder: "chat_images"
-                })
-                imageUrl = result.secure_url;
-            }
-
-            await User.findOneAndUpdate(
-                {
-                    _id: message.from,
-                    "friends._id": message.to
+  
+        ws.send(JSON.stringify({ type: "history", messages: group.message }));
+      }
+  
+      if (message.type === "group_message") {
+        try {
+          let imageUrl = null;
+          let audioUrl = null;
+  
+          if (message.image) {
+            const result = await cloudinary.uploader.upload(message.image, { folder: "chat_images" });
+            imageUrl = result.secure_url;
+          }
+  
+          if (message.audio) {
+            const result = await cloudinary.uploader.upload(message.audio, {
+              folder: "chat_audio",
+              resource_type: "video", 
+            });
+            audioUrl = result.secure_url;
+          }
+  
+          const group = await Group.findOneAndUpdate(
+            { _id: message.to },
+            {
+              $push: {
+                message: {
+                  from: message.from,
+                  text: message.text,
+                  timestamp: new Date(),
+                  image: imageUrl,
+                  audio: audioUrl, 
                 },
-                {
-                    $push: {
-                        "friends.$.message": {
-                            from: message.from,
-                            to: message.to,
-                            text: message.text,
-                            image: imageUrl,
-                            timestamp: new Date()
-                        }
-                    }
-                },
-                { new: true, runValidators: true }
-            );
-
-            const to = await User.findOneAndUpdate(
-                {
-                    _id: message.to,
-                    "friends._id": message.from
-                },
-                {
-                    $push: {
-                        "friends.$.message": {
-                            from: message.from,
-                            to: message.to,
-                            text: message.text,
-                            image: imageUrl,
-                            timestamp: new Date()
-                        }
-                    }
-                },
-                { new: true, runValidators: true }
-            );
-
-            console.log(to, "to")
-
-            // Send message to recipient if online
-            if (recipientWs && recipientWs.readyState === WebSocket.OPEN) {
-                recipientWs.send(JSON.stringify({
-                    from: message.from,
-                    message: message.text
-                }));
-            }
+              },
+            },
+            { new: true }
+          );
+  
+          console.log(group, "group");
+  
+          if (!group) {
+            return ws.send(JSON.stringify({ type: "error", message: "Group not found" }));
+          }
+        } catch (error) {
+          console.error("Error sending group message:", error);
+          ws.send(JSON.stringify({ type: "error", message: "Internal server error" }));
         }
-
-        if (message.type === 'get_history') {
-            const userId = new ObjectId(message.userId);
-            const friendId = new ObjectId(message.to);
-
-            const user = await User.findOne({
-                _id: userId,
-                "friends._id": friendId
-            }, { "friends.$": 1 });
-            console.log(user, 'user');
-
-            if (user && user.friends.length > 0) {
-                const chatHistory = user.friends[0].message.sort((a, b) => a.timestamp - b.timestamp);
-                ws.send(JSON.stringify({ type: 'history', messages: chatHistory }));
-            } else {
-                ws.send(JSON.stringify({ type: 'history', messages: [] }));
-            }
+      }
+  
+      if (message.type === "private_message") {
+        const recipientWs = clients.get(message.to);
+        let imageUrl = null;
+        let audioUrl = null;
+  
+        if (message.image) {
+          const result = await cloudinary.uploader.upload(message.image, { folder: "chat_images" });
+          imageUrl = result.secure_url;
         }
+  
+        if (message.audio) {
+          const result = await cloudinary.uploader.upload(message.audio, {
+            folder: "chat_audio",
+            resource_type: "video",
+          });
+          audioUrl = result.secure_url;
+        }
+  
+        await User.findOneAndUpdate(
+          { _id: message.from, "friends._id": message.to },
+          {
+            $push: {
+              "friends.$.message": {
+                from: message.from,
+                to: message.to,
+                text: message.text,
+                image: imageUrl,
+                audio: audioUrl, 
+                timestamp: new Date(),
+              },
+            },
+          },
+          { new: true, runValidators: true }
+        );
+  
+        const to = await User.findOneAndUpdate(
+          { _id: message.to, "friends._id": message.from },
+          {
+            $push: {
+              "friends.$.message": {
+                from: message.from,
+                to: message.to,
+                text: message.text,
+                image: imageUrl,
+                audio: audioUrl,
+                timestamp: new Date(),
+              },
+            },
+          },
+          { new: true, runValidators: true }
+        );
+  
+        console.log(to, "to");
+  
+        if (recipientWs) {
+          recipientWs.send(
+            JSON.stringify({
+              from: message.from,
+              message: message.text,
+              image: imageUrl,
+              audio: audioUrl,
+            })
+          );
+        }
+      }
+  
+      if (message.type === "get_history") {
+        const userId = new ObjectId(message.userId);
+        const friendId = new ObjectId(message.to);
+  
+        const user = await User.findOne({ _id: userId, "friends._id": friendId }, { "friends.$": 1 });
+        console.log(user, "user");
+  
+        if (user && user.friends.length > 0) {
+          const chatHistory = user.friends[0].message.sort((a, b) => a.timestamp - b.timestamp);
+          ws.send(JSON.stringify({ type: "history", messages: chatHistory }));
+        } else {
+          ws.send(JSON.stringify({ type: "history", messages: [] }));
+        }
+      }
     });
-
-    ws.on('close', () => {
-        for (let [userId, socket] of clients.entries()) {
-            if (socket === ws) {
-                clients.delete(userId);
-                console.log(`User ${userId} disconnected`);
-            }
+  
+    ws.on("close", () => {
+      for (let [userId, socket] of clients.entries()) {
+        if (socket === ws) {
+          clients.delete(userId);
+          console.log(`User ${userId} disconnected`);
         }
+      }
     });
-}
+  }
+
 const getallusers = async (req, res) => {
     try {
         const { id, username } = req.body;

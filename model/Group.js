@@ -11,6 +11,7 @@ const groupSchema = new mongoose.Schema({
         from: String,
         text: String,
         image:String,
+        audio:String,
         timestamp: { type: Date, default: Date.now },
     }],
     members:[],

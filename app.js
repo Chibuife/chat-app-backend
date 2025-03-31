@@ -46,9 +46,18 @@ app.use(session({
 
 // Initialize Passport
 app.use(passport.initialize());
-// app.use(passport.session());
 
-app.use(cors({ origin: 'http://localhost:8081' }));
+const allowedOrigins = [
+    "http://localhost:19006", 
+    "http://your-local-ip:19006", 
+    "https://yourdomain.com",
+    "https://expo.dev" 
+  ];
+  
+app.use(cors({   
+    origin: allowedOrigins,
+    credentials: true 
+ }));
 app.use(xss());
 
 // error middleware to prevent crash

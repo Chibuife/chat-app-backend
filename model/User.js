@@ -53,6 +53,7 @@ const userSchema = mongoose.Schema({
                 to: String,
                 text: String,
                 image:String,
+                audio:String,
                 timestamp: { type: Date, default: Date.now },
             }],
         }
